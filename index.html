@@ -1,0 +1,188 @@
+<html>
+    <head>
+        <title>Doom surviver</title>
+    </head>
+    <body>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
+        <!-- <script src="/socket.io/socket.io.js"></script> -->
+        <!-- <script type="module" defer>
+            import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
+
+            let socket = io();
+        </script> -->
+        <canvas id='cvs'></canvas>
+        <script>
+            const cvs = document.getElementById('cvs');
+            const ctx = cvs.getContext('2d');
+
+            cvs.width = 600;
+            cvs.height = 600;
+            cvs.style.border = '1px solid black';
+
+            let size = 20;
+
+            let joinedWorldId = 0;
+
+            let socket = io();
+
+            let playersCurrently = {}
+            let grid = [];
+
+            let currentSession = '';
+
+            let nowUser = '';
+
+            function create(user,pass) {
+                $.ajax({
+                    url:`${window.location.origin}/create`,
+                    data:{user:user,pass:pass},
+                    type:'POST',
+                    dataType:'json',
+                    success: function(response) {
+                        console.log(response);
+                    },
+                    error:(error) => console.log("request error:" + JSON.stringify(error)),
+                })
+            }
+
+            function login(user,pass) {
+                $.ajax({
+                    url:`${window.location.origin}/login`,
+                    data:{user:user,pass:pass},
+                    type:'POST',
+                    dataType:'json',
+                    success: function(response) {
+                        console.log(response);
+                        currentSession = response.session;
+                        nowUser = response.user;
+                    },
+                    error:(error) => console.log("request error:" + JSON.stringify(error)),
+                })
+            }
+
+            function join(worldId) {
+                $.ajax({
+                    url:`${window.location.origin}/join`,
+                    data:{worldId,session:currentSession,user:nowUser},
+                    type:'POST',
+                    dataType:'json',
+                    success: function(response) {
+                        console.log(response);
+                        if (response.status=='success') {
+                            joinedWorldId = worldId;
+                            socket.emit('join',worldId);
+                            playersCurrently = response.playerData;
+                            console.log(playersCurrently);
+                            grid = response.world;
+                            render();
+                        }
+                    },
+                    error:(error) => console.log("request error:" + JSON.stringify(error)),
+                })
+            }
+
+            function createWorld() {
+                $.ajax({
+                    url:`${window.location.origin}/createWorld`,
+                    data:{},
+                    type:'POST',
+                    dataType:'json',
+                    success: function(response) {
+                        console.log(response);
+                    },
+                    error:(error) => console.log("request error:" + JSON.stringify(error)),
+                })
+            }
+
+            function leave() {
+                console.log(joinedWorldId,nowUser);
+                $.ajax({
+                    url:`${window.location.origin}/leave`,
+                    data:{session:currentSession,worldId:joinedWorldId,user:nowUser},
+                    type:'POST',
+                    dataType:'json',
+                    success: function(response) {
+                        console.log(response);
+                        joinedWorldId = '';
+                        delete playersCurrently[nowUser];
+                        render();
+                    },
+                    error:(error) => console.log("request error:" + JSON.stringify(error)),
+                })
+            }
+
+            const colorConverter = {
+                0:'green',
+                1:'orange'
+            }
+
+            function render() {
+                ctx.clearRect(0,0,600,600);
+                grid.forEach((y,yi)=>{
+                    y.forEach((x,xi)=>{
+                        ctx.fillStyle = colorConverter[x];
+                        ctx.fillRect(xi*size,yi*size,size,size);
+                        ctx.strokeStyle = 'black';
+                        ctx.strokeRect(xi*size,yi*size,size,size);
+                    })
+                })
+                ctx.fillStyle = 'black'
+                for (x in playersCurrently) {
+                    ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
+                }
+            }
+
+            function convertBlock(x,y,c) {
+                socket.emit('block update',{x,y,c},joinedWorldId,currentSession,nowUser);
+            }
+
+            document.addEventListener('keydown',(e)=>{
+                switch (e.key) {
+                    case 'a':
+                        socket.emit('player movement',{x:-1,y:0},joinedWorldId,currentSession,nowUser);
+                        break;
+                    case 'w':
+                        socket.emit('player movement',{x:0,y:-1},joinedWorldId,currentSession,nowUser);
+                        break;
+                    case 's':
+                        socket.emit('player movement',{x:0,y:1},joinedWorldId,currentSession,nowUser);
+                        break;
+                    case 'd':
+                        socket.emit('player movement',{x:1,y:0},joinedWorldId,currentSession,nowUser);
+                        break;
+                }
+            })
+
+            socket.on('player movement server',(data,session)=>{
+                // console.log(playersCurrently);
+                // console.log(session);
+                // console.log(data);
+                playersCurrently[session].position.x += parseInt(data.x);
+                playersCurrently[session].position.y += parseInt(data.y);
+                render();
+            })
+
+            socket.on('block update server',(data)=>{
+                grid[data.y][data.x] = data.c;
+                render();
+            })
+
+            socket.on('disconnect', function() {
+                leave();
+            })
+
+            socket.on('leave server',(user)=>{
+                console.log('someone just left');
+                delete playersCurrently[user];
+                render();
+            })
+
+            socket.on('join server',(user,session,data)=>{
+                console.log('someone joined!');
+                playersCurrently = data;
+                render();
+            })
+        </script>
+    </body>
+</html>
