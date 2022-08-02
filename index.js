@@ -27,16 +27,19 @@ io.on('connection',(socket)=>{
         // console.log(io.sockets.adapter.rooms);
     });
     socket.on('player movement',(data,worldId,session,user)=>{
-        console.log(gameBuffer[worldId].playerData);
+        // console.log(gameBuffer[worldId].playerData);
         // logGreen('received player movement');
         // logGreen(worldId);
         // logGreen(session);
-        console.log(gameBuffer);
+        // console.log(gameBuffer);
         let nowX = gameBuffer[worldId].playerData[user].position.x;
         let nowY = gameBuffer[worldId].playerData[user].position.y;
         // logGreen(nowX);
         // logGreen(nowY);
         if (nowX+data.x < 0 || nowX+data.x > 29 || nowY+data.y < 0 || nowY+data.y > 29) {
+            return;
+        }
+        if (gameBuffer[worldId].world[nowY+data.y][nowX+data.x]!=0) {
             return;
         }
         gameBuffer[worldId].playerData[user].position.x += data.x;
@@ -46,7 +49,7 @@ io.on('connection',(socket)=>{
     socket.on('block update',(data,worldId,session,user)=>{
         logGreen(worldId);
         logGreen(user);
-        console.log(gameBuffer);
+        // console.log(gameBuffer);
         gameBuffer[worldId].world[data.y][data.x] = data.c;
         io.in(worldId).emit('block update server',data);
     })
@@ -54,6 +57,12 @@ io.on('connection',(socket)=>{
     //     logRed('disconnect');
     //     socket.reconnect();
     // })
+    socket.on('chat',(msg,user,worldId)=>{
+        io.in(worldId).emit('chat server',msg,user);
+    })
+    socket.on('player turn',(reps,worldId,session,user)=>{
+        io.in(worldId).emit('player turn server',reps,worldId,session,user);
+    })
 });
 
 function init() {
@@ -191,24 +200,28 @@ app.post('/join',(req,res)=>{
     db.get('select count(*) from worlds where worldId=?',[worldId],(err,row)=>{
         if (err) throw err;
         if (row['count(*)']>0) {
+            // console.log(gameBuffer);
             if (gameBuffer.hasOwnProperty(worldId)) {
+                // console.log(gameBuffer[worldId].playerList)
                 gameBuffer[worldId].playerList.push(user);
+                // console.log(gameBuffer[worldId].playerList);
                 let parsedPlayerData = gameBuffer[worldId].playerData;
                 if (!parsedPlayerData.hasOwnProperty(user)) {
-                    parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)}};
+                    parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0};
                 }
                 gameBuffer[worldId].playerData = parsedPlayerData;
                 let filteredData = {};
+                // console.log(gameBuffer[worldId].playerList);
                 for (x in parsedPlayerData) {
                     if (gameBuffer[worldId].playerList.includes(x)) {
                         filteredData[x] = parsedPlayerData[x];
                     }
                 }
-                console.log(filteredData);
+                // console.log(filteredData);
                 // console.log(parsedPlayerData);
                 // console.log(gameBuffer);
                 res.send({status:'success',world:gameBuffer[worldId].world,playerData:filteredData});
-                console.log(gameBuffer[worldId].playerList);
+                // console.log(gameBuffer[worldId].playerList);
                 io.in(worldId).emit('join server',user,session,filteredData);
                 // console.log(gameBuffer);
             }
@@ -219,7 +232,7 @@ app.post('/join',(req,res)=>{
                     gameBuffer[worldId] = {playerList:[user],world:JSON.parse(row.world)};
                     let parsedPlayerData = JSON.parse(row.playerData);
                     if (!parsedPlayerData.hasOwnProperty(user)) {
-                        parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)}};
+                        parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0};
                     }
                     gameBuffer[worldId].playerData = parsedPlayerData;
                     let filteredData = {};
@@ -228,9 +241,9 @@ app.post('/join',(req,res)=>{
                             filteredData[x] = parsedPlayerData[x];
                         }
                     }
-                    console.log(filteredData);
+                    // console.log(filteredData);
                     res.send({status:'success',world:gameBuffer[worldId].world,playerData:filteredData});
-                    console.log(gameBuffer[worldId].playerList);
+                    // console.log(gameBuffer[worldId].playerList);
                     io.in(worldId).emit('join server',user,session,filteredData);
                     // console.log(gameBuffer);
                 })
@@ -260,17 +273,17 @@ app.post('/createWorld',(req,res)=>{
 
 app.post('/leave',(req,res)=>{
     let {session,worldId,user} = req.body;
-    console.log(worldId);
-    console.log(session);
+    // console.log(worldId);
+    // console.log(session);
     if (gameBuffer.hasOwnProperty(worldId)) {
         if (gameBuffer[worldId].playerList.includes(user)) {
-            gameBuffer[worldId].playerList = gameBuffer[worldId].playerList.filter(x=>!x==user);
-            if (gameBuffer[worldId].playerList.length<1) {
+            gameBuffer[worldId].playerList = gameBuffer[worldId].playerList.filter(x=>x!=user);
+            // if (gameBuffer[worldId].playerList.length<1) {
                 db.run('update worlds set world=?,playerData=? where worldId=?',[JSON.stringify(gameBuffer[worldId].world),JSON.stringify(gameBuffer[worldId].playerData),worldId],(err)=>{
                     if (err) throw err;
                     io.sockets.in(worldId).emit('leave server',user);
                 });
-            }
+            // }
         }
         else {
             res.send({status:'failure',reason:'who are you'})

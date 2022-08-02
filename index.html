@@ -2,6 +2,32 @@
     <head>
         <title>Doom surviver</title>
     </head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400&display=swap');
+
+        #chat {
+            height:400px;
+            width:400px;
+            border: 1px solid black;
+            padding-top: 10px;
+            overflow-y:scroll;
+            overflow-x:scroll;
+        }
+        .msg {
+            padding-top: 0px;
+            padding-bottom: 0px;
+            margin-top: 0px;
+            margin-bottom: 0px;
+            margin-left: 10px;
+            font-family: 'Inconsolata', monospace;
+        }
+        #cvs {
+            display: inline-block;
+        }
+        #loginText {
+            color: red;
+        }
+    </style>
     <body>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
@@ -11,7 +37,36 @@
 
             let socket = io();
         </script> -->
-        <canvas id='cvs'></canvas>
+        <div id='loginSec' class='sec'>
+            <div id='login'>
+                <input id='loginUser' type='text' placeholder='username'>
+                <input id='loginPass' type='text' placeholder='password'>
+                <button id='loginSubmit' onclick='loginMain()'>Login</button>
+            </div>
+            <div id='signup'>
+                <input id='signupUser' type='text' placeholder='username'>
+                <input id='signupPass' type='text' placeholder='password'>
+                <input id='signupPassConfirm' type='text' placeholder='confirm password (type it again)'>
+                <button id='signupSubmit' onclick='signupMain()'>Signup</button>
+            </div>
+            <p id='loginText'></p>
+        </div>
+        <div id='joinWorldSec' class='sec' hidden>
+            <input id='worldIdInput' type='number' placeholder='world id'>
+            <button id='worldIdSubmit' onclick='submitWorldId()'>Join</button>
+            <hr>
+            <button id='createWorld' onclick='createWorld()'>Create a new world</button>
+            <p id='joinText'></p>
+        </div>
+        <div id='gameSec' class='sec' hidden>
+            <div id='pauseMenu' hidden>
+                <h3>Game menu:</h3>
+                <button id='leave' onclick='leave()'>Save and leave game</button>
+            </div>
+            <canvas id='cvs'></canvas>
+            <div id='chat'></div>
+        </div>
+        
         <script>
             const cvs = document.getElementById('cvs');
             const ctx = cvs.getContext('2d');
@@ -33,6 +88,13 @@
 
             let nowUser = '';
 
+            let playing = false;
+
+            const colorConverter = {
+                0:'green',
+                1:'orange'
+            }
+
             function create(user,pass) {
                 $.ajax({
                     url:`${window.location.origin}/create`,
@@ -41,6 +103,12 @@
                     dataType:'json',
                     success: function(response) {
                         console.log(response);
+                        if (response.status=='success') {
+                            $('#loginText').html(`Successfully created account. Please login now.`);
+                        }
+                        else {
+                            $('#loginText').html('Username is used. Please login or choose a new username.');
+                        }
                     },
                     error:(error) => console.log("request error:" + JSON.stringify(error)),
                 })
@@ -54,8 +122,17 @@
                     dataType:'json',
                     success: function(response) {
                         console.log(response);
-                        currentSession = response.session;
-                        nowUser = response.user;
+                        
+                        if (response.status=='success') {
+                            currentSession = response.session;
+                            nowUser = response.user;
+                            $('#loginText').html(`Successfully logged in as ${nowUser}.`);
+                            $('.sec').hide();
+                            $('#joinWorldSec').show();
+                        }
+                        else {
+                            $('#loginText').html('User or password not correct. Please try again or register an account.');
+                        }
                     },
                     error:(error) => console.log("request error:" + JSON.stringify(error)),
                 })
@@ -76,6 +153,13 @@
                             console.log(playersCurrently);
                             grid = response.world;
                             render();
+                            $('#joinText').html('Joined successfully, will show world in a moment.');
+                            $('.sec').hide();
+                            $('#gameSec').show();
+                            playing = true;
+                        }
+                        else {
+                            $('#joinText').html('World not found. Please create a world or try again.');
                         }
                     },
                     error:(error) => console.log("request error:" + JSON.stringify(error)),
@@ -90,6 +174,10 @@
                     dataType:'json',
                     success: function(response) {
                         console.log(response);
+                        if (response.status == 'success') {
+                            $('#joinText').html(`World creation successful. Your worldId is ${response.worldId}. <span style='red'><b>Remember it. You will need it to join the world. Don't tell anyone unless you wish them to join.</b></span><br> Code copied to clipboard.`);
+                            navigator.clipboard.writeText(response.worldId);
+                        }
                     },
                     error:(error) => console.log("request error:" + JSON.stringify(error)),
                 })
@@ -107,14 +195,11 @@
                         joinedWorldId = '';
                         delete playersCurrently[nowUser];
                         render();
+                        $('.sec').hide();
+                        $('#joinWorldSec').show();
                     },
                     error:(error) => console.log("request error:" + JSON.stringify(error)),
                 })
-            }
-
-            const colorConverter = {
-                0:'green',
-                1:'orange'
             }
 
             function render() {
@@ -123,21 +208,64 @@
                     y.forEach((x,xi)=>{
                         ctx.fillStyle = colorConverter[x];
                         ctx.fillRect(xi*size,yi*size,size,size);
+                        // ctx.strokeStyle = 'black';
+                        // ctx.strokeRect(xi*size,yi*size,size,size);
+                    })
+                })
+                for (x in playersCurrently) {
+                    ctx.fillStyle = 'black'
+                    ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
+                    ctx.fillStyle = 'blue';
+                    
+                    switch (playersCurrently[x].facing) {
+                        case 0:
+                            ctx.fillRect(playersCurrently[x].position.x*size+size*2/3,playersCurrently[x].position.y*size,size/3,size);
+                            break;
+                        case 1:
+                            ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size/3);
+                            break;
+                        case 2:
+                            ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size/3,size);
+                            break;
+                        case 3:
+                            ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size+size*2/3,size,size/3);
+                            break;
+                    }
+                }
+                grid.forEach((y,yi)=>{
+                    y.forEach((x,xi)=>{
                         ctx.strokeStyle = 'black';
                         ctx.strokeRect(xi*size,yi*size,size,size);
                     })
                 })
-                ctx.fillStyle = 'black'
-                for (x in playersCurrently) {
-                    ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
-                }
+            }
+
+            function sendChat(msg) {
+                socket.emit('chat',msg,nowUser,joinedWorldId)
             }
 
             function convertBlock(x,y,c) {
                 socket.emit('block update',{x,y,c},joinedWorldId,currentSession,nowUser);
             }
 
+            function loginMain() {
+                login($('#loginUser').val(),$('#loginPass').val());
+            }
+
+            function signupMain() {
+                if ($('#signupPass').val()!=$('#signupPassConfirm').val()) {
+                    $('#loginText').html('The password and the confirm doesn\'t match');
+                    return;
+                }
+                create($('#signupUser').val(),$('#signupPass').val());
+            }
+
+            function submitWorldId() {
+                join($('#worldIdInput').val());
+            }
+
             document.addEventListener('keydown',(e)=>{
+                if (!playing) return;
                 switch (e.key) {
                     case 'a':
                         socket.emit('player movement',{x:-1,y:0},joinedWorldId,currentSession,nowUser);
@@ -151,7 +279,63 @@
                     case 'd':
                         socket.emit('player movement',{x:1,y:0},joinedWorldId,currentSession,nowUser);
                         break;
+                    case 'q':
+                        socket.emit('player turn',1,joinedWorldId,currentSession,nowUser);
+                        break;
+                    case 'Escape':
+                        $('#pauseMenu').toggle();
+                        break;
                 }
+            })
+
+            cvs.addEventListener('mousedown',(e)=>{
+                if (!playing) return;
+                console.log(e.which);
+                let data = playersCurrently[nowUser]
+                switch (e.which) {
+                    case 1:
+                        console.log('pressed 1')
+                        switch (data.facing) {
+                            case 0:
+                                convertBlock(data.position.x+1,data.position.y,0);
+                                break;
+                            case 1:
+                                convertBlock(data.position.x,data.position.y-1,0);
+                                break;
+                            case 2:
+                                convertBlock(data.position.x-1,data.position.y,0);
+                                break;
+                            case 3:
+                                convertBlock(data.position.x,data.position.y+1,0);
+                                break;
+                        }
+                        break;
+                    case 3:
+                        console.log('pressed 3')
+                        e.preventDefault();
+                        console.log('right clicked');
+                        switch (data.facing) {
+                            case 0:
+                                convertBlock(data.position.x+1,data.position.y,1);
+                                break;
+                            case 1:
+                                convertBlock(data.position.x,data.position.y-1,1);
+                                break;
+                            case 2:
+                                convertBlock(data.position.x-1,data.position.y,1);
+                                break;
+                            case 3:
+                                convertBlock(data.position.x,data.position.y+1,1);
+                                break;
+                        }
+                        break;
+                }
+            })
+
+            cvs.addEventListener('contextmenu',(e)=>{
+                if (!playing) return;
+                e.preventDefault();
+                console.log('right click');
             })
 
             socket.on('player movement server',(data,session)=>{
@@ -169,18 +353,34 @@
             })
 
             socket.on('disconnect', function() {
-                leave();
+                if (joinedWorldId && nowUser) {
+                    leave();
+                }
             })
 
             socket.on('leave server',(user)=>{
                 console.log('someone just left');
                 delete playersCurrently[user];
                 render();
+                $('.sec').hide();
+                $('#joinWorldSec').show();
             })
 
             socket.on('join server',(user,session,data)=>{
                 console.log('someone joined!');
                 playersCurrently = data;
+                render();
+            })
+
+            socket.on('chat server',(msg,user)=>{
+                console.log(`${user}: ${msg}`);
+                $('#chat').prepend(`<p class='msg'><i>${user}</i>: ${msg}</p>`);
+                // document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+            })
+
+            socket.on('player turn server',(reps,worldId,session,user)=>{
+                playersCurrently[user].facing += reps;
+                playersCurrently[user].facing %= 4;
                 render();
             })
         </script>
