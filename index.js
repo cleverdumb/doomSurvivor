@@ -207,7 +207,11 @@ app.post('/join',(req,res)=>{
                 // console.log(gameBuffer[worldId].playerList);
                 let parsedPlayerData = gameBuffer[worldId].playerData;
                 if (!parsedPlayerData.hasOwnProperty(user)) {
-                    parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0};
+                    let inventory = [];
+                    for (let a=0; a<40; a++) {
+                        inventory.push({item:'air',quan:0});
+                    }
+                    parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
                 }
                 gameBuffer[worldId].playerData = parsedPlayerData;
                 let filteredData = {};
@@ -232,7 +236,11 @@ app.post('/join',(req,res)=>{
                     gameBuffer[worldId] = {playerList:[user],world:JSON.parse(row.world)};
                     let parsedPlayerData = JSON.parse(row.playerData);
                     if (!parsedPlayerData.hasOwnProperty(user)) {
-                        parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0};
+                        let inventory = [];
+                        for (let a=0; a<40; a++) {
+                            inventory.push({item:'air',quan:0});
+                        }
+                        parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
                     }
                     gameBuffer[worldId].playerData = parsedPlayerData;
                     let filteredData = {};

@@ -64,6 +64,7 @@
                 <button id='leave' onclick='leave()'>Save and leave game</button>
             </div>
             <canvas id='cvs'></canvas>
+            <canvas id='inventory'></canvas>
             <div id='chat'></div>
         </div>
         
@@ -71,9 +72,18 @@
             const cvs = document.getElementById('cvs');
             const ctx = cvs.getContext('2d');
 
+            const invCvs = document.getElementById('inventory');
+            const invCtx = invCvs.getContext('2d');
+
             cvs.width = 600;
             cvs.height = 600;
             cvs.style.border = '1px solid black';
+
+            invCvs.width = 600;
+            invCvs.height = 240;
+            invCvs.style.border = '1px solid black';
+
+            invBoxSize = 60;
 
             let size = 20;
 
@@ -93,6 +103,10 @@
             const colorConverter = {
                 0:'green',
                 1:'orange'
+            }
+
+            const itemColor = {
+                air:'cyan'
             }
 
             function create(user,pass) {
@@ -157,6 +171,7 @@
                             $('.sec').hide();
                             $('#gameSec').show();
                             playing = true;
+                            console.log(response.inventory);
                         }
                         else {
                             $('#joinText').html('World not found. Please create a world or try again.');
@@ -237,6 +252,26 @@
                         ctx.strokeStyle = 'black';
                         ctx.strokeRect(xi*size,yi*size,size,size);
                     })
+                })
+                // for (x in playersCurrently[nowUser].inventory) {
+                //     let rowNumber = Math.ceil(c)
+                //     let colNumber = c%10;
+                //     invCtx.fillStyle = itemColor[x];
+                //     invCtx.fillRect(colNumber*invBoxSize,rowNumber*invBoxSize,invBoxSize,invBoxSize);
+                //     invCtx.strokeStyle = 'black';
+                //     invCtx.strokeRect(colNumber*invBoxSize,rowNumber*invBoxSize,invBoxSize,invBoxSize);
+                // }
+                playersCurrently[nowUser].inventory.forEach((x,i)=>{
+                    let rowNumber = Math.floor(i/10)
+                    let colNumber = i%10;
+                    invCtx.fillStyle = itemColor[x.item];
+                    invCtx.fillRect(colNumber*invBoxSize,rowNumber*invBoxSize,invBoxSize,invBoxSize);
+                    invCtx.strokeStyle = 'black';
+                    invCtx.strokeRect(colNumber*invBoxSize,rowNumber*invBoxSize,invBoxSize,invBoxSize);
+                    invCtx.fillStyle = 'black';
+                    
+                    invCtx.font = '15px monospace'
+                    invCtx.fillText(x.quan,colNumber*invBoxSize+5,rowNumber*invBoxSize+15);
                 })
             }
 
