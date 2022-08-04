@@ -63,7 +63,32 @@ io.on('connection',(socket)=>{
     socket.on('player turn',(reps,worldId,session,user)=>{
         io.in(worldId).emit('player turn server',reps,worldId,session,user);
     })
+    socket.on('player get item',(item,quan,worldId,session,user)=>{
+        // let ableQuan = ableGiveItem(user,item,quan,worldId);
+        // if (!ableQuan) return;
+
+        // logRed('ok');
+        // giveItem(user,item,quan,socket,worldId);
+        // socket.emit('invChange',slot,item,quan);
+        playerGetItem(item,quan,worldId,session,user,socket);
+    })
 });
+
+let leftQuan = 0;
+
+function playerGetItem(item,quan,worldId,session,user,socket) {
+    leftQuan = quan;
+    let ableQuan = ableGiveItem(user,item,quan,worldId);
+    console.log(ableQuan);
+    if (!ableQuan) return;
+    leftQuan -= ableQuan;
+    giveItem(user,item,ableQuan,socket,worldId);
+    // socket.emit('invChange',slot,item,ableQuan);
+    if (leftQuan === 0) return;
+    playerGetItem(item,leftQuan,worldId,session,user,socket);
+    // logRed('ok');
+    // socket.emit('invChange',slot,item,quan)
+}
 
 function init() {
     db.run('create table if not exists userPass (userId integer primary key autoincrement, user varchar(30) unique not null, pass varchar not null)',(err)=>{
@@ -75,6 +100,31 @@ function init() {
             })
         })
     })
+}
+
+function ableGiveItem(user,item,quan,worldId) {
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    // return (gameBuffer[worldId].playerData[user].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))>-1)
+    let firstSlot = inv.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<100));
+    if (firstSlot == -1) return false;
+    if (inv[firstSlot].quan == 100) {
+        return false;
+    }
+    else {
+        return Math.min(100-inv[firstSlot].quan,quan);
+    }
+} 
+
+function giveItem(user,item,quan,socket,worldId) {
+    let slot = gameBuffer[worldId].playerData[user].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    if (inv[slot].item == item) {
+        inv[slot].quan += quan;
+    }
+    else if (inv[slot].item == 'air') {
+        inv[slot] = {item,quan};
+    }
+    socket.emit('inv change server',slot,item,inv[slot].quan);
 }
 
 init();
