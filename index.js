@@ -50,8 +50,8 @@ io.on('connection',(socket)=>{
             else {
                 console.log(`need to generate at x: ${regionX-1} y: ${regionY}`)
                 generateRegion(regionX-1,regionY,worldId,user);
-                io.in(worldId).emit('player movement server',{x:28,y:0},user);
-                gameBuffer[worldId].playerData[user].position.x += 28;
+                io.in(worldId).emit('player movement server',{x:29,y:0},user);
+                gameBuffer[worldId].playerData[user].position.x += 29;
                 return;
             }
         }
@@ -76,8 +76,8 @@ io.on('connection',(socket)=>{
             else {
                 console.log(`need to generate at x: ${regionX} y: ${regionY-1}`)
                 generateRegion(regionX,regionY-1,worldId,user);
-                io.in(worldId).emit('player movement server',{x:0,y:28},user);
-                gameBuffer[worldId].playerData[user].position.y += 28;
+                io.in(worldId).emit('player movement server',{x:0,y:29},user);
+                gameBuffer[worldId].playerData[user].position.y += 29;
                 return;
             }
         }

@@ -230,7 +230,7 @@
                     })
                 })
                 for (x in playersCurrently) {
-                    if (playersCurrently[x].region.x != playersCurrently[nowUser].region.x || playersCurrently[x].region.y != playersCurrently[nowUser].region.y) return;
+                    if (playersCurrently[x].region.x != playersCurrently[nowUser].region.x || playersCurrently[x].region.y != playersCurrently[nowUser].region.y) continue;
                     ctx.fillStyle = 'black'
                     ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
                     ctx.fillStyle = 'blue';
