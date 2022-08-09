@@ -64,6 +64,7 @@
                 <button id='leave' onclick='leave()'>Save and leave game</button>
             </div>
             <canvas id='cvs'></canvas>
+            <br>
             <canvas id='inventory'></canvas>
             <div id='chat'></div>
         </div>
@@ -106,7 +107,8 @@
             }
 
             const itemColor = {
-                air:'cyan'
+                air:'cyan',
+                iron:'brown'
             }
 
             function create(user,pass) {
@@ -219,7 +221,7 @@
 
             function render() {
                 ctx.clearRect(0,0,600,600);
-                grid.forEach((y,yi)=>{
+                grid[playersCurrently[nowUser].region.y][playersCurrently[nowUser].region.x].forEach((y,yi)=>{
                     y.forEach((x,xi)=>{
                         ctx.fillStyle = colorConverter[x];
                         ctx.fillRect(xi*size,yi*size,size,size);
@@ -228,6 +230,7 @@
                     })
                 })
                 for (x in playersCurrently) {
+                    if (playersCurrently[x].region.x != playersCurrently[nowUser].region.x || playersCurrently[x].region.y != playersCurrently[nowUser].region.y) return;
                     ctx.fillStyle = 'black'
                     ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
                     ctx.fillStyle = 'blue';
@@ -247,7 +250,7 @@
                             break;
                     }
                 }
-                grid.forEach((y,yi)=>{
+                grid[playersCurrently[x].region.y][playersCurrently[x].region.x].forEach((y,yi)=>{
                     y.forEach((x,xi)=>{
                         ctx.strokeStyle = 'black';
                         ctx.strokeRect(xi*size,yi*size,size,size);
@@ -297,6 +300,10 @@
 
             function submitWorldId() {
                 join($('#worldIdInput').val());
+            }
+
+            function getItem(item,quan) {
+                socket.emit('player get item',item,quan,joinedWorldId,currentSession,nowUser)
             }
 
             document.addEventListener('keydown',(e)=>{
@@ -383,7 +390,10 @@
             })
 
             socket.on('block update server',(data)=>{
-                grid[data.y][data.x] = data.c;
+                console.log(data);
+                console.log(grid);
+                console.log(playersCurrently[nowUser])
+                grid[playersCurrently[nowUser].region.y][playersCurrently[nowUser].region.x][data.y][data.x] = data.c;
                 render();
             })
 
@@ -416,6 +426,42 @@
             socket.on('player turn server',(reps,worldId,session,user)=>{
                 playersCurrently[user].facing += reps;
                 playersCurrently[user].facing %= 4;
+                render();
+            })
+
+            // socket.on('add item server',(item,quan)=>{
+            //     giveItem(item,quan);
+            //     console.log('got the emit');
+            // })
+
+            // function giveItem(item,quan) {
+            //     let slot = playersCurrently[nowUser].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))
+            //     let inv = playersCurrently[nowUser].inventory;
+            //     if (inv[slot].item == item) {
+            //         inv[slot].quan += quan;
+            //     }
+            //     else if (inv[slot].item == 'air') {
+            //         inv[slot] = {item,quan};
+            //     }
+            //     render();
+            // }
+
+            socket.on('inv change server',(slot,item,quan)=>{
+                console.log(quan);
+                playersCurrently[nowUser].inventory[slot].item = item;
+                playersCurrently[nowUser].inventory[slot].quan = quan;
+                render();
+            })
+
+            socket.on('change region server',(user,x,y)=>{
+                console.log(user,x,y)
+                playersCurrently[user].region.x = x;
+                playersCurrently[user].region.y = y;
+                render();
+            })
+
+            socket.on('generate region server',(x,y,region)=>{
+                grid[y][x] = region;
                 render();
             })
         </script>

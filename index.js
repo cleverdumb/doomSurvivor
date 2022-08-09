@@ -34,23 +34,79 @@ io.on('connection',(socket)=>{
         // console.log(gameBuffer);
         let nowX = gameBuffer[worldId].playerData[user].position.x;
         let nowY = gameBuffer[worldId].playerData[user].position.y;
+
+        let regionX = gameBuffer[worldId].playerData[user].region.x;
+        let regionY = gameBuffer[worldId].playerData[user].region.y;
         // logGreen(nowX);
         // logGreen(nowY);
-        if (nowX+data.x < 0 || nowX+data.x > 29 || nowY+data.y < 0 || nowY+data.y > 29) {
-            return;
+        // if (nowX+data.x < 0 || nowX+data.x > 29 || nowY+data.y < 0 || nowY+data.y > 29) {
+        //     return;
+        // }
+        if ((nowX + data.x) < 0) {
+            console.log('case 1')
+            if (regionX <= 0) {
+                return;
+            }
+            else {
+                console.log(`need to generate at x: ${regionX-1} y: ${regionY}`)
+                generateRegion(regionX-1,regionY,worldId,user);
+                io.in(worldId).emit('player movement server',{x:28,y:0},user);
+                gameBuffer[worldId].playerData[user].position.x += 28;
+                return;
+            }
         }
-        if (gameBuffer[worldId].world[nowY+data.y][nowX+data.x]!=0) {
+        if ((nowX + data.x) > 29) {
+            console.log('case 2')
+            if (regionX >= 29) {
+                return;
+            }
+            else {
+                console.log(`need to generate at x: ${regionX+1} y: ${regionY}`)
+                generateRegion(regionX+1,regionY,worldId,user);
+                io.in(worldId).emit('player movement server',{x:-29,y:0},user);
+                gameBuffer[worldId].playerData[user].position.x -= 29;
+                return;
+            }
+        }
+        if ((nowY + data.y) < 0) {
+            console.log('case 3')
+            if (regionY <= 0) {
+                return;
+            }
+            else {
+                console.log(`need to generate at x: ${regionX} y: ${regionY-1}`)
+                generateRegion(regionX,regionY-1,worldId,user);
+                io.in(worldId).emit('player movement server',{x:0,y:28},user);
+                gameBuffer[worldId].playerData[user].position.y += 28;
+                return;
+            }
+        }
+        if ((nowY + data.y) > 29) {
+            console.log('case 4')
+            if (regionY >= 29) {
+                return;
+            }
+            else {
+                console.log(`need to generate at x: ${regionX} y: ${regionY+1}`)
+                generateRegion(regionX,regionY+1,worldId,user);
+                io.in(worldId).emit('player movement server',{x:0,y:-29},user);
+                gameBuffer[worldId].playerData[user].position.y -= 29;
+                return;
+            }
+        }
+        if (gameBuffer[worldId].world[gameBuffer[worldId].playerData[user].region.y][gameBuffer[worldId].playerData[user].region.x][nowY+data.y][nowX+data.x]!=0) {
             return;
         }
         gameBuffer[worldId].playerData[user].position.x += data.x;
         gameBuffer[worldId].playerData[user].position.y += data.y;
         io.in(worldId).emit('player movement server',data,user);
+        
     });
     socket.on('block update',(data,worldId,session,user)=>{
         logGreen(worldId);
         logGreen(user);
         // console.log(gameBuffer);
-        gameBuffer[worldId].world[data.y][data.x] = data.c;
+        gameBuffer[worldId].world[gameBuffer[worldId].playerData[user].region.y][gameBuffer[worldId].playerData[user].region.x][data.y][data.x] = data.c;
         io.in(worldId).emit('block update server',data);
     })
     // socket.on('disconnect',()=>{
@@ -63,7 +119,32 @@ io.on('connection',(socket)=>{
     socket.on('player turn',(reps,worldId,session,user)=>{
         io.in(worldId).emit('player turn server',reps,worldId,session,user);
     })
+    socket.on('player get item',(item,quan,worldId,session,user)=>{
+        // let ableQuan = ableGiveItem(user,item,quan,worldId);
+        // if (!ableQuan) return;
+
+        // logRed('ok');
+        // giveItem(user,item,quan,socket,worldId);
+        // socket.emit('invChange',slot,item,quan);
+        playerGetItem(item,quan,worldId,session,user,socket);
+    })
 });
+
+let leftQuan = 0;
+
+function playerGetItem(item,quan,worldId,session,user,socket) {
+    leftQuan = quan;
+    let ableQuan = ableGiveItem(user,item,quan,worldId);
+    console.log(ableQuan);
+    if (!ableQuan) return;
+    leftQuan -= ableQuan;
+    giveItem(user,item,ableQuan,socket,worldId);
+    // socket.emit('invChange',slot,item,ableQuan);
+    if (leftQuan === 0) return;
+    playerGetItem(item,leftQuan,worldId,session,user,socket);
+    // logRed('ok');
+    // socket.emit('invChange',slot,item,quan)
+}
 
 function init() {
     db.run('create table if not exists userPass (userId integer primary key autoincrement, user varchar(30) unique not null, pass varchar not null)',(err)=>{
@@ -75,6 +156,49 @@ function init() {
             })
         })
     })
+}
+
+function ableGiveItem(user,item,quan,worldId) {
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    // return (gameBuffer[worldId].playerData[user].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))>-1)
+    let firstSlot = inv.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<100));
+    if (firstSlot == -1) return false;
+    if (inv[firstSlot].quan == 100) {
+        return false;
+    }
+    else {
+        return Math.min(100-inv[firstSlot].quan,quan);
+    }
+} 
+
+function giveItem(user,item,quan,socket,worldId) {
+    let slot = gameBuffer[worldId].playerData[user].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    if (inv[slot].item == item) {
+        inv[slot].quan += quan;
+    }
+    else if (inv[slot].item == 'air') {
+        inv[slot] = {item,quan};
+    }
+    socket.emit('inv change server',slot,item,inv[slot].quan);
+}
+
+function generateRegion(x,y,worldId,user) {
+    console.log(x,y);
+    if (gameBuffer[worldId].world[y][x] === 'ungenerated') {
+        let newRegion = [];
+        for (let y=0; y<30; y++) {
+            newRegion.push([]);
+            for (let x=0; x<30; x++) {
+                newRegion[y].push(0);
+            }
+        }
+        gameBuffer[worldId].world[y][x] = newRegion;
+        io.in(worldId).emit('generate region server',x,y,newRegion)
+    }
+    io.in(worldId).emit('change region server',user,x,y);
+    gameBuffer[worldId].playerData[user].region.x = x;
+    gameBuffer[worldId].playerData[user].region.y = y;
 }
 
 init();
@@ -211,7 +335,7 @@ app.post('/join',(req,res)=>{
                     for (let a=0; a<40; a++) {
                         inventory.push({item:'air',quan:0});
                     }
-                    parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
+                    parsedPlayerData[user] = {region:{x:0,y:0},position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
                 }
                 gameBuffer[worldId].playerData = parsedPlayerData;
                 let filteredData = {};
@@ -240,7 +364,7 @@ app.post('/join',(req,res)=>{
                         for (let a=0; a<40; a++) {
                             inventory.push({item:'air',quan:0});
                         }
-                        parsedPlayerData[user] = {position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
+                        parsedPlayerData[user] = {region:{x:0,y:0},position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
                     }
                     gameBuffer[worldId].playerData = parsedPlayerData;
                     let filteredData = {};
@@ -269,9 +393,17 @@ app.post('/createWorld',(req,res)=>{
     for (let a=0; a<30; a++) {
         world.push([]);
         for (let b=0; b<30; b++) {
-            world[a].push(0);
+            world[a].push('ungenerated');
         }
     }
+    let reg = [];
+    for (let a=0; a<30; a++) {
+        reg.push([]);
+        for (let b=0; b<30; b++) {
+            reg[a].push(0);
+        }
+    }
+    world[0][0] = reg;
     world = JSON.stringify(world);
     db.run('insert into worlds values(?,?,?)',[id,world,JSON.stringify({})],(err)=>{
         if (err) throw err;
