@@ -194,9 +194,9 @@ function generateRegion(x,y,worldId,user) {
             }
         }
         for (let x=0; x<Math.round(Math.random()*2+10); x++) {
-            let randX = Math.round(Math.random()*29);
-            let randY = Math.round(Math.random()*29);
-            if (newRegion[randY][randX] != 0) {
+            let randX = Math.round(Math.random()*27+1);
+            let randY = Math.round(Math.random()*27+1);
+            if (newRegion[randY][randX] != 0 || (randX == 14 && randY == 14)) {
                 x--;
                 continue;
             }
@@ -375,7 +375,7 @@ app.post('/join',(req,res)=>{
                         for (let a=0; a<40; a++) {
                             inventory.push({item:'air',quan:0});
                         }
-                        parsedPlayerData[user] = {region:{x:0,y:0},position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
+                        parsedPlayerData[user] = {region:{x:0,y:0},position:{x:14,y:14},facing:0,inventory:inventory};
                     }
                     gameBuffer[worldId].playerData = parsedPlayerData;
                     let filteredData = {};
@@ -415,9 +415,9 @@ app.post('/createWorld',(req,res)=>{
         }
     }
     for (let x=0; x<Math.round(Math.random()*2+10); x++) {
-        let randX = Math.round(Math.random()*29);
-        let randY = Math.round(Math.random()*29);
-        if (reg[randY][randX] != 0) {
+        let randX = Math.round(Math.random()*27+1);
+        let randY = Math.round(Math.random()*27+1);
+        if (reg[randY][randX] != 0 || (randX==14 && randY==14)) {
             x--;
             continue;
         }
