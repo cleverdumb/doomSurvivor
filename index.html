@@ -307,6 +307,10 @@
                 socket.emit('player get item',item,quan,joinedWorldId,currentSession,nowUser)
             }
 
+            function deleteItem(item,quan) {
+                socket.emit('player delete item',item,quan,joinedWorldId,currentSession,nowUser);
+            }
+
             document.addEventListener('keydown',(e)=>{
                 if (!playing) return;
                 switch (e.key) {

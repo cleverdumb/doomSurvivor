@@ -128,6 +128,16 @@ io.on('connection',(socket)=>{
         // socket.emit('invChange',slot,item,quan);
         playerGetItem(item,quan,worldId,session,user,socket);
     })
+    socket.on('player delete item',(item,quan,worldId,session,user)=>{
+        if (canDeleteItem(worldId,user,item,quan)) {
+            let changes = deleteItem(worldId,user,item,quan);
+            let inv = gameBuffer[worldId].playerData[user].inventory;
+            changes.forEach(x=>{
+                console.log(inv[x]);
+                socket.emit('inv change server',x,inv[x].item,inv[x].quan);
+            })
+        }
+    })
 });
 
 let leftQuan = 0;
@@ -210,6 +220,42 @@ function generateRegion(x,y,worldId,user) {
     io.in(worldId).emit('change region server',user,x,y);
     gameBuffer[worldId].playerData[user].region.x = x;
     gameBuffer[worldId].playerData[user].region.y = y;
+}
+
+function canDeleteItem(worldId,user,item,quan) {
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    let sum = 0;
+    inv.forEach(x=>{
+        if (x.item == item) {
+            sum += x.quan;
+        }
+    })
+    return sum>=quan;
+}
+
+let needQuan = 0;
+
+function deleteItem(worldId,user,item,quan) {
+    needQuan = quan;
+    let inv = gameBuffer[worldId].playerData[user].inventory;
+    let changeSlots = [];
+    inv.forEach((x,i)=>{
+        if (needQuan <= 0) {
+            return;
+        }
+        else {
+            changeSlots.push(i);
+            if (needQuan >= x.quan) {
+                needQuan -= x.quan;
+                inv[i] = {item:'air',quan:0};
+            }
+            else {
+                x.quan -= needQuan;
+                needQuan = 0;
+            }
+        }
+    })
+    return changeSlots;
 }
 
 init();
