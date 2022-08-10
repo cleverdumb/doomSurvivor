@@ -193,6 +193,17 @@ function generateRegion(x,y,worldId,user) {
                 newRegion[y].push(0);
             }
         }
+        for (let x=0; x<Math.round(Math.random()*2+10); x++) {
+            let randX = Math.round(Math.random()*29);
+            let randY = Math.round(Math.random()*29);
+            if (newRegion[randY][randX] != 0) {
+                x--;
+                continue;
+            }
+            else {
+                newRegion[randY][randX] = 2;
+            }
+        }
         gameBuffer[worldId].world[y][x] = newRegion;
         io.in(worldId).emit('generate region server',x,y,newRegion)
     }
@@ -401,6 +412,17 @@ app.post('/createWorld',(req,res)=>{
         reg.push([]);
         for (let b=0; b<30; b++) {
             reg[a].push(0);
+        }
+    }
+    for (let x=0; x<Math.round(Math.random()*2+10); x++) {
+        let randX = Math.round(Math.random()*29);
+        let randY = Math.round(Math.random()*29);
+        if (reg[randY][randX] != 0) {
+            x--;
+            continue;
+        }
+        else {
+            reg[randY][randX] = 2;
         }
     }
     world[0][0] = reg;
