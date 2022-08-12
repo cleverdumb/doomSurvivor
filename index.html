@@ -101,6 +101,8 @@
 
             let playing = false;
 
+            let slot = 0;
+
             const colorConverter = {
                 0:'green',
                 1:'orange',
@@ -231,7 +233,7 @@
                         // ctx.strokeRect(xi*size,yi*size,size,size);
                     })
                 })
-                for (x in playersCurrently) {
+                for (let x in playersCurrently) {
                     if (playersCurrently[x].region.x != playersCurrently[nowUser].region.x || playersCurrently[x].region.y != playersCurrently[nowUser].region.y) continue;
                     ctx.fillStyle = 'black'
                     ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size,size,size);
@@ -251,13 +253,13 @@
                             ctx.fillRect(playersCurrently[x].position.x*size,playersCurrently[x].position.y*size+size*2/3,size,size/3);
                             break;
                     }
-                }
-                grid[playersCurrently[x].region.y][playersCurrently[x].region.x].forEach((y,yi)=>{
-                    y.forEach((x,xi)=>{
-                        ctx.strokeStyle = 'black';
-                        ctx.strokeRect(xi*size,yi*size,size,size);
+                    grid[playersCurrently[x].region.y][playersCurrently[x].region.x].forEach((y,yi)=>{
+                        y.forEach((x,xi)=>{
+                            ctx.strokeStyle = 'black';
+                            ctx.strokeRect(xi*size,yi*size,size,size);
+                        })
                     })
-                })
+                }
                 // for (x in playersCurrently[nowUser].inventory) {
                 //     let rowNumber = Math.ceil(c)
                 //     let colNumber = c%10;
@@ -278,6 +280,40 @@
                     invCtx.font = '15px monospace'
                     invCtx.fillText(x.quan,colNumber*invBoxSize+5,rowNumber*invBoxSize+15);
                 })
+                let y = Math.floor(slot/10)*invBoxSize;
+                let x = slot%10*invBoxSize;
+                invCtx.fillStyle = 'black';
+                invCtx.beginPath();
+                invCtx.moveTo(x,y);
+                invCtx.lineTo(x+10,y);
+                invCtx.lineTo(x,y+10);
+                invCtx.lineTo(x,y);
+                invCtx.closePath();
+                invCtx.fill();
+
+                invCtx.beginPath();
+                invCtx.moveTo(x+invBoxSize,y);
+                invCtx.lineTo(x+invBoxSize-10,y);
+                invCtx.lineTo(x+invBoxSize,y+10);
+                invCtx.lineTo(x+invBoxSize,y);
+                invCtx.closePath();
+                invCtx.fill();
+
+                invCtx.beginPath();
+                invCtx.moveTo(x,y+invBoxSize);
+                invCtx.lineTo(x,y+invBoxSize-10);
+                invCtx.lineTo(x+10,y+invBoxSize);
+                invCtx.lineTo(x,y+invBoxSize);
+                invCtx.closePath();
+                invCtx.fill();
+
+                invCtx.beginPath();
+                invCtx.moveTo(x+invBoxSize,y+invBoxSize);
+                invCtx.lineTo(x+invBoxSize-10,y+invBoxSize);
+                invCtx.lineTo(x+invBoxSize,y+invBoxSize-10);
+                invCtx.lineTo(x+invBoxSize,y+invBoxSize);
+                invCtx.closePath();
+                invCtx.fill();
             }
 
             function sendChat(msg) {
@@ -336,6 +372,32 @@
                         break;
                     case 'Escape':
                         $('#pauseMenu').toggle();
+                        break;
+                    case 'ArrowLeft':
+                        slot--;
+                        slot+=40;
+                        slot%=40;
+                        render();
+                        break;
+                    case 'ArrowRight':
+                        slot++;
+                        slot+=40;
+                        slot%=40;
+                        render();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        slot-=10;
+                        slot+=40;
+                        slot%=40;
+                        render();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        slot+=10;
+                        slot+=40;
+                        slot%=40;
+                        render();
                         break;
                 }
             })

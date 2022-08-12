@@ -146,6 +146,7 @@ io.on('connection',(socket)=>{
         let regionX = gameBuffer[worldId].playerData[user].region.x;
         let regionY = gameBuffer[worldId].playerData[user].region.y;
         if (gameBuffer[worldId].world[regionY][regionX][y][x] === 0) {
+            logRed('mining air hugh')
             return;
         }
         io.in(worldId).emit('block update server',{x,y,c:0,regionX,regionY});
