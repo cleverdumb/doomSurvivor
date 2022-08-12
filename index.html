@@ -109,7 +109,8 @@
 
             const itemColor = {
                 air:'cyan',
-                iron:'brown'
+                iron:'brown',
+                wood:'orange'
             }
 
             function create(user,pass) {
@@ -311,6 +312,10 @@
                 socket.emit('player delete item',item,quan,joinedWorldId,currentSession,nowUser);
             }
 
+            function breakBlock(x,y) {
+                socket.emit('break block',joinedWorldId,nowUser,currentSession,x,y);
+            }
+
             document.addEventListener('keydown',(e)=>{
                 if (!playing) return;
                 switch (e.key) {
@@ -344,16 +349,16 @@
                         console.log('pressed 1')
                         switch (data.facing) {
                             case 0:
-                                convertBlock(data.position.x+1,data.position.y,0);
+                                breakBlock(data.position.x+1,data.position.y);
                                 break;
                             case 1:
-                                convertBlock(data.position.x,data.position.y-1,0);
+                                breakBlock(data.position.x,data.position.y-1);
                                 break;
                             case 2:
-                                convertBlock(data.position.x-1,data.position.y,0);
+                                breakBlock(data.position.x-1,data.position.y);
                                 break;
                             case 3:
-                                convertBlock(data.position.x,data.position.y+1,0);
+                                breakBlock(data.position.x,data.position.y+1);
                                 break;
                         }
                         break;
@@ -398,7 +403,7 @@
                 console.log(data);
                 console.log(grid);
                 console.log(playersCurrently[nowUser])
-                grid[playersCurrently[nowUser].region.y][playersCurrently[nowUser].region.x][data.y][data.x] = data.c;
+                grid[data.regionY][data.regionX][data.y][data.x] = data.c;
                 render();
             })
 

@@ -20,6 +20,10 @@ let gameBuffer = {}
 server = http.Server(app);
 server.listen(port);
 
+const blockLootTable = {
+    2:['wood']
+}
+
 let io = socketIO(server);
 io.on('connection',(socket)=>{
     socket.on('join',(worldId)=>{
@@ -137,6 +141,19 @@ io.on('connection',(socket)=>{
                 socket.emit('inv change server',x,inv[x].item,inv[x].quan);
             })
         }
+    })
+    socket.on('break block',(worldId,user,session,x,y)=>{
+        let regionX = gameBuffer[worldId].playerData[user].region.x;
+        let regionY = gameBuffer[worldId].playerData[user].region.y;
+        if (gameBuffer[worldId].world[regionY][regionX][y][x] === 0) {
+            return;
+        }
+        io.in(worldId).emit('block update server',{x,y,c:0,regionX,regionY});
+        // logRed(gameBuffer[worldId].world[regionY][regionX][y][x])
+        // logRed(blockLootTable[gameBuffer[worldId].world[regionY][regionX][y][x]]);
+        playerGetItem(blockLootTable[gameBuffer[worldId].world[regionY][regionX][y][x]],1,worldId,session,user,socket);
+        logGreen('break block');
+        gameBuffer[worldId].world[regionY][regionX][y][x] = 0;
     })
 });
 
