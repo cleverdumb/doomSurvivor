@@ -1,30 +1,41 @@
-const express = require('express');
+import express from 'express';
+import bodyParser from 'body-parser';
+import * as http from 'http';
+import {Server} from 'socket.io';
+import sqlite from 'sqlite3';
+import path from 'path';
+import {fileURLToPath} from 'url';
+
+const sqlite3 = sqlite.verbose();
+
 const app = express();
-const bodyParser = require('body-parser');
-const http = require('http');
-const socketIO = require('socket.io');
-const {lookup} = require('geoip-lite');
+
+import {blockList} from './blockList.mjs';
+console.log(blockList);
 
 const port = 3011;
 
 app.use(express.static('static'));
 app.use(bodyParser.urlencoded({extended:true}));
 
-const sqlite3 = require('sqlite3').verbose();
+// const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('data.db',sqlite3.OPEN_READWRITE,(err)=>{
     if (err) throw err;
 })
 
 let gameBuffer = {}
 
-server = http.Server(app);
+const server = http.Server(app);
 server.listen(port);
 
 const blockLootTable = {
     2:['wood']
 }
 
-let io = socketIO(server);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let io = new Server(server);
 io.on('connection',(socket)=>{
     socket.on('join',(worldId)=>{
         socket.join(worldId);
@@ -133,6 +144,7 @@ io.on('connection',(socket)=>{
         playerGetItem(item,quan,worldId,session,user,socket);
     })
     socket.on('player delete item',(item,quan,worldId,session,user)=>{
+        console.log(countInv(worldId,user,item));
         if (canDeleteItem(worldId,user,item,quan)) {
             let changes = deleteItem(worldId,user,item,quan);
             let inv = gameBuffer[worldId].playerData[user].inventory;
@@ -159,6 +171,10 @@ io.on('connection',(socket)=>{
 });
 
 let leftQuan = 0;
+
+function countInv(worldId,user,item) {
+    return gameBuffer[worldId].playerData[user].inventory.filter(x=>x.item==item).reduce((a,b)=>a.quan+b.quan);
+}
 
 function playerGetItem(item,quan,worldId,session,user,socket) {
     leftQuan = quan;
@@ -410,12 +426,12 @@ app.post('/join',(req,res)=>{
                     for (let a=0; a<40; a++) {
                         inventory.push({item:'air',quan:0});
                     }
-                    parsedPlayerData[user] = {region:{x:0,y:0},position:{x:Math.round(Math.random()*10+10),y:Math.round(Math.random()*10+10)},facing:0,inventory:inventory};
+                    parsedPlayerData[user] = {region:{x:0,y:0},position:{x:14,y:14},facing:0,inventory:inventory};
                 }
                 gameBuffer[worldId].playerData = parsedPlayerData;
                 let filteredData = {};
                 // console.log(gameBuffer[worldId].playerList);
-                for (x in parsedPlayerData) {
+                for (let x in parsedPlayerData) {
                     if (gameBuffer[worldId].playerList.includes(x)) {
                         filteredData[x] = parsedPlayerData[x];
                     }
@@ -443,7 +459,7 @@ app.post('/join',(req,res)=>{
                     }
                     gameBuffer[worldId].playerData = parsedPlayerData;
                     let filteredData = {};
-                    for (x in parsedPlayerData) {
+                    for (let x in parsedPlayerData) {
                         if (gameBuffer[worldId].playerList.includes(x)) {
                             filteredData[x] = parsedPlayerData[x];
                         }
