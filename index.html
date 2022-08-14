@@ -372,6 +372,10 @@
                 $('#chatInput').val('');
             }
 
+            function placeBlock(x,y) {
+                socket.emit('place block',x,y,joinedWorldId,nowUser,currentSession,slot);
+            }
+
             document.addEventListener('keydown',(e)=>{
                 if (!playing) return;
                 if ($('#chatInput').is(':focus')) return;
@@ -451,16 +455,16 @@
                         console.log('right clicked');
                         switch (data.facing) {
                             case 0:
-                                convertBlock(data.position.x+1,data.position.y,1);
+                                placeBlock(data.position.x+1,data.position.y);
                                 break;
                             case 1:
-                                convertBlock(data.position.x,data.position.y-1,1);
+                                placeBlock(data.position.x,data.position.y-1);
                                 break;
                             case 2:
-                                convertBlock(data.position.x-1,data.position.y,1);
+                                placeBlock(data.position.x-1,data.position.y);
                                 break;
                             case 3:
-                                convertBlock(data.position.x,data.position.y+1,1);
+                                placeBlock(data.position.x,data.position.y+1);
                                 break;
                         }
                         break;
@@ -541,6 +545,7 @@
 
             socket.on('inv change server',(slot,item,quan)=>{
                 console.log(quan);
+                console.log(item);
                 playersCurrently[nowUser].inventory[slot].item = item;
                 playersCurrently[nowUser].inventory[slot].quan = quan;
                 render();

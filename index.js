@@ -158,16 +158,38 @@ io.on('connection',(socket)=>{
         io.in(worldId).emit('block update server',{x,y,c:0,regionX,regionY});
         // logRed(gameBuffer[worldId].world[regionY][regionX][y][x])
         // logRed(blockLootTable[gameBuffer[worldId].world[regionY][regionX][y][x]]);
-        playerGetItem(blockLootTable[gameBuffer[worldId].world[regionY][regionX][y][x]],1,worldId,session,user,socket);
+        playerGetItem(blockLootTable[gameBuffer[worldId].world[regionY][regionX][y][x]][0],1,worldId,session,user,socket);
         logGreen('break block');
         gameBuffer[worldId].world[regionY][regionX][y][x] = 0;
+    })
+    socket.on('place block',(x,y,worldId,user,session,slot)=>{
+        let invSlot = gameBuffer[worldId].playerData[user].inventory[slot];
+        console.log(invSlot);
+        let regionX = gameBuffer[worldId].playerData[user].region.x;
+        let regionY = gameBuffer[worldId].playerData[user].region.y;
+        if (blockList.includes(invSlot.item)) {
+            if (gameBuffer[worldId].world[regionY][regionX][y][x] === 0) {
+                logGreen('place block');
+                io.in(worldId).emit('block update server',{x,y,c:blockId[invSlot.item],regionX,regionY});
+                gameBuffer[worldId].world[regionY][regionX][y][x] = blockId[invSlot.item];
+                let changes = deleteItem(worldId,user,invSlot.item,1);
+                console.log(changes);
+                console.log(invSlot);
+                changes.forEach(x=>{
+                    console.log(invSlot.item);
+                    console.log(invSlot.quan);
+                    console.log(gameBuffer[worldId].playerData[user].inventory[0])
+                    socket.emit('inv change server',x,gameBuffer[worldId].playerData[user].inventory[x].item,gameBuffer[worldId].playerData[user].inventory[x].quan);
+                });
+            }
+        }
     })
 });
 
 let leftQuan = 0;
 
 function countInv(worldId,user,item) {
-    return gameBuffer[worldId].playerData[user].inventory.filter(x=>x.item==item).reduce((a,b)=>a.quan+b.quan);
+    return gameBuffer[worldId].playerData[user].inventory.filter(x=>x.item==item).reduce((a,b)=>a.quan+b.quan,0);
 }
 
 function playerGetItem(item,quan,worldId,session,user,socket) {
