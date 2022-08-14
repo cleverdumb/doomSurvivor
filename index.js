@@ -5,13 +5,11 @@ import {Server} from 'socket.io';
 import sqlite from 'sqlite3';
 import path from 'path';
 import {fileURLToPath} from 'url';
+import {blockList,blockLootTable,blockId} from './constants.mjs';
 
 const sqlite3 = sqlite.verbose();
 
 const app = express();
-
-import {blockList} from './blockList.mjs';
-console.log(blockList);
 
 const port = 3011;
 
@@ -27,10 +25,6 @@ let gameBuffer = {}
 
 const server = http.Server(app);
 server.listen(port);
-
-const blockLootTable = {
-    2:['wood']
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
