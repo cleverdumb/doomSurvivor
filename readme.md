@@ -3,4 +3,4 @@
 
 To try it do:
 1. Run `npm start`
-2. Go to <http://localhost:3011/index.html>
+2. Go to <http://localhost:3011/>
