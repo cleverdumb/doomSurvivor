@@ -27,6 +27,9 @@
         #loginText {
             color: red;
         }
+        #chatInput {
+            width:400px;
+        }
     </style>
     <body>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -66,6 +69,9 @@
             <canvas id='cvs'></canvas>
             <br>
             <canvas id='inventory'></canvas>
+            <br>
+            <input type='text' placeholder='Put chat content here' id='chatInput'>
+            <button onclick='chatSubmit()'>Send</button>
             <div id='chat'></div>
         </div>
         
@@ -352,8 +358,23 @@
                 socket.emit('break block',joinedWorldId,nowUser,currentSession,x,y);
             }
 
+            function chatSubmit() {
+                let content = $('#chatInput').val();
+                if (content !== '' && !content.includes('<script>')) {
+                    socket.emit('chat',content,nowUser,joinedWorldId);
+                }
+                else if (content === '') {
+                    alert('Please write something.');
+                }
+                else if (content.includes('<script>')) {
+                    alert('No js injection please.');
+                }
+                $('#chatInput').val('');
+            }
+
             document.addEventListener('keydown',(e)=>{
                 if (!playing) return;
+                if ($('#chatInput').is(':focus')) return;
                 switch (e.key) {
                     case 'a':
                         socket.emit('player movement',{x:-1,y:0},joinedWorldId,currentSession,nowUser);
