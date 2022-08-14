@@ -189,7 +189,7 @@ function init() {
         if (err) throw err;
         db.run('create table if not exists sessions (userId integer, user varchar, session varchar)',(err)=>{
             if (err) throw err;
-            db.run('create table if not exists worlds (worldId integer not null, world varchar not null, players varchar)',(err)=>{
+            db.run('create table if not exists worlds (worldId integer not null, world varchar not null, playerData varchar)',(err)=>{
                 if (err) throw err;
             })
         })
