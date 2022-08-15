@@ -96,7 +96,7 @@
 
             let joinedWorldId = 0;
 
-            let socket = io();
+            let socket;
 
             let playersCurrently = {}
             let grid = [];
@@ -173,6 +173,8 @@
                     success: function(response) {
                         console.log(response);
                         if (response.status=='success') {
+                            socket = io();
+                            setSocketEvents();
                             joinedWorldId = worldId;
                             socket.emit('join',worldId);
                             playersCurrently = response.playerData;
@@ -221,7 +223,8 @@
                         console.log(response);
                         joinedWorldId = '';
                         delete playersCurrently[nowUser];
-                        render();
+                        // render();
+                        console.log('should hide');
                         $('.sec').hide();
                         $('#joinWorldSec').show();
                     },
@@ -230,6 +233,7 @@
             }
 
             function render() {
+                if (!(nowUser !== '' && nowUser in playersCurrently)) return;
                 ctx.clearRect(0,0,600,600);
                 grid[playersCurrently[nowUser].region.y][playersCurrently[nowUser].region.x].forEach((y,yi)=>{
                     y.forEach((x,xi)=>{
@@ -476,92 +480,97 @@
                 e.preventDefault();
                 console.log('right click');
             })
+            function setSocketEvents() {
+                socket.on('player movement server',(data,session)=>{
+                    // console.log(playersCurrently);
+                    // console.log(session);
+                    // console.log(data);
+                    playersCurrently[session].position.x += parseInt(data.x);
+                    playersCurrently[session].position.y += parseInt(data.y);
+                    render();
+                })
 
-            socket.on('player movement server',(data,session)=>{
-                // console.log(playersCurrently);
-                // console.log(session);
-                // console.log(data);
-                playersCurrently[session].position.x += parseInt(data.x);
-                playersCurrently[session].position.y += parseInt(data.y);
-                render();
-            })
+                socket.on('block update server',(data)=>{
+                    console.log(data);
+                    console.log(grid);
+                    console.log(playersCurrently[nowUser])
+                    grid[data.regionY][data.regionX][data.y][data.x] = data.c;
+                    render();
+                })
 
-            socket.on('block update server',(data)=>{
-                console.log(data);
-                console.log(grid);
-                console.log(playersCurrently[nowUser])
-                grid[data.regionY][data.regionX][data.y][data.x] = data.c;
-                render();
-            })
+                socket.on('disconnect', function() {
+                    if (joinedWorldId && nowUser) {
+                        leave();
+                    }
+                })
 
-            socket.on('disconnect', function() {
-                if (joinedWorldId && nowUser) {
-                    leave();
-                }
-            })
+                socket.on('leave server',(user)=>{
+                    console.log('someone just left');
+                    delete playersCurrently[user];
+                    if (user==nowUser) {
+                        $('.sec').hide();
+                        $('#joinWorldSec').show();
+                    }
+                    else {
+                        render();
+                    }
+                })
 
-            socket.on('leave server',(user)=>{
-                console.log('someone just left');
-                delete playersCurrently[user];
-                render();
-                $('.sec').hide();
-                $('#joinWorldSec').show();
-            })
+                socket.on('join server',(user,session,data)=>{
+                    console.log('someone joined!');
+                    playersCurrently = data;
+                    render();
+                })
 
-            socket.on('join server',(user,session,data)=>{
-                console.log('someone joined!');
-                playersCurrently = data;
-                render();
-            })
+                socket.on('chat server',(msg,user)=>{
+                    console.log(`${user}: ${msg}`);
+                    $('#chat').prepend(`<p class='msg'><i>${user}</i>: ${msg}</p>`);
+                    // document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+                })
 
-            socket.on('chat server',(msg,user)=>{
-                console.log(`${user}: ${msg}`);
-                $('#chat').prepend(`<p class='msg'><i>${user}</i>: ${msg}</p>`);
-                // document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-            })
+                socket.on('player turn server',(reps,worldId,session,user)=>{
+                    playersCurrently[user].facing += reps;
+                    playersCurrently[user].facing %= 4;
+                    render();
+                })
 
-            socket.on('player turn server',(reps,worldId,session,user)=>{
-                playersCurrently[user].facing += reps;
-                playersCurrently[user].facing %= 4;
-                render();
-            })
+                // socket.on('add item server',(item,quan)=>{
+                //     giveItem(item,quan);
+                //     console.log('got the emit');
+                // })
 
-            // socket.on('add item server',(item,quan)=>{
-            //     giveItem(item,quan);
-            //     console.log('got the emit');
-            // })
+                // function giveItem(item,quan) {
+                //     let slot = playersCurrently[nowUser].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))
+                //     let inv = playersCurrently[nowUser].inventory;
+                //     if (inv[slot].item == item) {
+                //         inv[slot].quan += quan;
+                //     }
+                //     else if (inv[slot].item == 'air') {
+                //         inv[slot] = {item,quan};
+                //     }
+                //     render();
+                // }
 
-            // function giveItem(item,quan) {
-            //     let slot = playersCurrently[nowUser].inventory.findIndex(x=>(x.item==item||x.item=='air')&&(x.quan<=100-quan))
-            //     let inv = playersCurrently[nowUser].inventory;
-            //     if (inv[slot].item == item) {
-            //         inv[slot].quan += quan;
-            //     }
-            //     else if (inv[slot].item == 'air') {
-            //         inv[slot] = {item,quan};
-            //     }
-            //     render();
-            // }
+                socket.on('inv change server',(slot,item,quan)=>{
+                    console.log(quan);
+                    console.log(item);
+                    playersCurrently[nowUser].inventory[slot].item = item;
+                    playersCurrently[nowUser].inventory[slot].quan = quan;
+                    render();
+                })
 
-            socket.on('inv change server',(slot,item,quan)=>{
-                console.log(quan);
-                console.log(item);
-                playersCurrently[nowUser].inventory[slot].item = item;
-                playersCurrently[nowUser].inventory[slot].quan = quan;
-                render();
-            })
+                socket.on('change region server',(user,x,y)=>{
+                    console.log(user,x,y)
+                    playersCurrently[user].region.x = x;
+                    playersCurrently[user].region.y = y;
+                    render();
+                })
 
-            socket.on('change region server',(user,x,y)=>{
-                console.log(user,x,y)
-                playersCurrently[user].region.x = x;
-                playersCurrently[user].region.y = y;
-                render();
-            })
-
-            socket.on('generate region server',(x,y,region)=>{
-                grid[y][x] = region;
-                render();
-            })
+                socket.on('generate region server',(x,y,region)=>{
+                    grid[y][x] = region;
+                    render();
+                })
+            }   
         </script>
     </body>
 </html>
